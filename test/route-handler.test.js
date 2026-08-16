@@ -22,34 +22,34 @@ function mockRes() {
 const makeConfig = () => ({ autoControl: true, defaultTarget: 'https://x', onlyComplex: false })
 const makeRefs = () => ({ pinged: false, fishSeq: 0 })
 
-test('GET /video-pet/state returns snapshot + config', async () => {
+test('GET /slackoff/state returns snapshot + config', async () => {
   const machine = createActivityMachine()
   machine.onStatus('running')
   const handler = createStateHandler(machine, makeConfig(), makeRefs())
   const res = mockRes()
-  await handler(mockReq('GET', '/video-pet/state'), res)
+  await handler(mockReq('GET', '/slackoff/state'), res)
   const json = JSON.parse(res.body)
   assert.equal(json.state, 'thinking')
   assert.equal(json.autoControl, true)
 })
 
-test('GET /video-pet/state exposes exactly the whitelisted fields', async () => {
+test('GET /slackoff/state exposes exactly the whitelisted fields', async () => {
   const machine = createActivityMachine()
   machine.onStatus('running')
   const config = Object.assign(makeConfig(), { injected: 'SECRET' })
   const handler = createStateHandler(machine, config, makeRefs())
   const res = mockRes()
-  await handler(mockReq('GET', '/video-pet/state'), res)
+  await handler(mockReq('GET', '/slackoff/state'), res)
   const json = JSON.parse(res.body)
   assert.deepEqual(Object.keys(json).sort(), ['autoControl', 'clientPinged', 'defaultTarget', 'fishSeq', 'onlyComplex', 'since', 'state'])
   assert.equal(json.injected, undefined)
 })
 
-test('POST /video-pet/control toggles autoControl', async () => {
+test('POST /slackoff/control toggles autoControl', async () => {
   const config = makeConfig()
   const handler = createStateHandler(createActivityMachine(), config, makeRefs())
   const res = mockRes()
-  await handler(mockReq('POST', '/video-pet/control', JSON.stringify({ autoControl: false })), res)
+  await handler(mockReq('POST', '/slackoff/control', JSON.stringify({ autoControl: false })), res)
   assert.equal(config.autoControl, false)
   assert.equal(JSON.parse(res.body).autoControl, false)
 })
@@ -57,7 +57,7 @@ test('POST /video-pet/control toggles autoControl', async () => {
 test('unknown path -> 404', async () => {
   const handler = createStateHandler(createActivityMachine(), makeConfig(), makeRefs())
   const res = mockRes()
-  await handler(mockReq('GET', '/video-pet/nope'), res)
+  await handler(mockReq('GET', '/slackoff/nope'), res)
   assert.equal(res.status, 404)
 })
 
