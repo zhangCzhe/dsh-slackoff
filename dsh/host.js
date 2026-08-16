@@ -24,7 +24,7 @@ export function normalizeUrl(u) {
 export function createStateHandler(machine, config, refs) {
   return async function handler(req, res) {
     let pathname = (req.url || '/').split('?')[0]
-    if (pathname.indexOf('/video-pet') === 0) pathname = pathname.slice('/video-pet'.length) || '/'
+    if (pathname.indexOf('/slackoff') === 0) pathname = pathname.slice('/slackoff'.length) || '/'
     res.setHeader('content-type', 'application/json; charset=utf-8')
     res.setHeader('cache-control', 'no-store')
     if (pathname === '/state' && req.method === 'GET') {
@@ -122,7 +122,7 @@ export default {
       return configSnapshot()
     })
 
-    const dispose = ctx.webServer.register({ kind: 'prefix', path: '/video-pet', handler: createStateHandler(machine, config, refs) })
+    const dispose = ctx.webServer.register({ kind: 'prefix', path: '/slackoff', handler: createStateHandler(machine, config, refs) })
     ctx.effect(() => { return () => { clearComplexTimer(); dispose() } })
   },
 }
