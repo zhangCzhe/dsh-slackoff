@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-scratch/dsh-slackoff",
+  "name": "dsh-slackoff",
   "version": "0.1.0",
   "type": "module",
   "main": "host.js",
