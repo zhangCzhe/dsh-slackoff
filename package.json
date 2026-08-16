@@ -1,0 +1,13 @@
+{
+  "name": "dsh-slackoff",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build:extension": "node build-extension.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}

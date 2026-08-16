@@ -1,0 +1,121 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2937;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #0ea5e9;
+    --busy: #16a34a;
+    --idle: #6b7280;
+    --offline: #dc2626;
+    --card: #f9fafb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1f22;
+      --fg: #e5e7eb;
+      --muted: #9ca3af;
+      --line: #383a3f;
+      --card: #282a2e;
+      --idle: #9ca3af;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 320px;
+    background: var(--bg);
+    color: var(--fg);
+    font: 13px/1.5 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    padding: 14px 16px 12px;
+  }
+  header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+  .logo { font-size: 18px; }
+  .title { font-size: 15px; font-weight: 700; }
+  .subtitle { color: var(--muted); font-size: 12px; }
+
+  .status {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .status-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .status-row .label { color: var(--muted); }
+  .badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: var(--idle); color: #fff; white-space: nowrap;
+  }
+  .badge.busy { background: var(--busy); }
+  .badge.offline { background: var(--offline); }
+  .mono {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 11px; color: var(--muted);
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .toggle {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 4px; cursor: pointer; border-bottom: 1px solid var(--line);
+  }
+  .toggle:last-of-type { border-bottom: none; }
+  .toggle input { display: none; }
+  .track {
+    width: 36px; height: 20px; border-radius: 999px; background: var(--muted);
+    position: relative; flex-shrink: 0; transition: background .18s; opacity: .45;
+  }
+  .track::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; transition: left .18s;
+  }
+  .toggle input:checked + .track { background: var(--accent); opacity: 1; }
+  .toggle input:checked + .track::after { left: 18px; }
+  .toggle .text { flex: 1; }
+  .toggle .desc { display: block; font-size: 11px; color: var(--muted); }
+
+  footer { margin-top: 10px; font-size: 11px; color: var(--muted); text-align: center; }
+  footer code { color: var(--accent); }
+</style>
+
+<header>
+  <span class="logo">🐟</span>
+  <span class="title">dsh-slackoff</span>
+  <span class="subtitle">摸鱼伴侣</span>
+</header>
+
+<section class="status">
+  <div class="status-row">
+    <span class="label">AI 状态</span>
+    <span id="state" class="badge">—</span>
+  </div>
+  <div class="status-row">
+    <span class="label">目标站点</span>
+    <span id="target" class="mono">—</span>
+  </div>
+</section>
+
+<form id="f">
+  <label class="toggle">
+    <input type="checkbox" name="autoControl">
+    <span class="track"></span>
+    <span class="text">自动控制播放/暂停
+      <span class="desc">AI 工作时自动播放，中断/询问时自动暂停</span>
+    </span>
+  </label>
+  <label class="toggle">
+    <input type="checkbox" name="pip">
+    <span class="track"></span>
+    <span class="text">画中画小窗
+      <span class="desc">播放时自动进入画中画模式</span>
+    </span>
+  </label>
+</form>
+
+<footer>目标网站在 DSH「<code>🐟 摸鱼配置</code>」中设置</footer>
+
+<script src="options.js"></script>
