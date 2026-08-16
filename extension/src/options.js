@@ -16,13 +16,13 @@ for (const k of Object.keys(defaults)) {
   })
 }
 
-// 状态指示：轮询 DSH 的 /video-pet/state
+// 状态指示：轮询 DSH 的 /slackoff/state
 const STATE_LABELS = { thinking: '思考中', tool: '执行工具', awaiting: '等待中', idle: '空闲' }
 async function refreshStatus() {
   const stateEl = $('#state')
   const targetEl = $('#target')
   try {
-    const res = await fetch('http://127.0.0.1:3080/video-pet/state')
+    const res = await fetch('http://127.0.0.1:3080/slackoff/state')
     if (!res.ok) throw new Error('http ' + res.status)
     const s = await res.json()
     stateEl.textContent = STATE_LABELS[s.state] || s.state
