@@ -1,31 +1,53 @@
 import { createActivityMachine } from './state-machine.js'
 
-const DEFAULT_CONFIG = { autoControl: true, defaultTarget: '' }
+export async function readBody(req) {
+  const parts = []
+  let total = 0
+  for await (const chunk of req) {
+    const b = chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk)
+    parts.push(b)
+    total += b.length
+  }
+  const merged = new Uint8Array(total)
+  let off = 0
+  for (const p of parts) { merged.set(p, off); off += p.length }
+  return new TextDecoder().decode(merged)
+}
 
-// 独立导出便于单测；不依赖 DSH 运行时。
-export function createStateHandler(machine, getConfig) {
+export function normalizeUrl(u) {
+  const s = (u || '').trim()
+  if (!s) return s
+  if (/^https?:\/\//i.test(s)) return s
+  return 'https://' + s
+}
+
+export function createStateHandler(machine, config, refs) {
   return async function handler(req, res) {
-    const url = new URL(req.url ?? '/', 'http://dsh.local')
-    let pathname = url.pathname
-    if (pathname.startsWith('/video-pet')) pathname = pathname.slice('/video-pet'.length) || '/'
+    let pathname = (req.url || '/').split('?')[0]
+    if (pathname.indexOf('/video-pet') === 0) pathname = pathname.slice('/video-pet'.length) || '/'
     res.setHeader('content-type', 'application/json; charset=utf-8')
     res.setHeader('cache-control', 'no-store')
     if (pathname === '/state' && req.method === 'GET') {
-      const { state, since } = machine.snapshot()
-      const { autoControl, defaultTarget } = getConfig()
-      res.end(JSON.stringify({ state, since, autoControl, defaultTarget }))
+      const snap = machine.snapshot()
+      res.end(JSON.stringify({
+        state: snap.state,
+        since: snap.since,
+        autoControl: config.autoControl,
+        defaultTarget: config.defaultTarget,
+        onlyComplex: config.onlyComplex,
+        clientPinged: refs.pinged,
+        fishSeq: refs.fishSeq,
+      }))
       return
     }
     if (pathname === '/control' && req.method === 'POST') {
-      const chunks = []
-      for await (const c of req) chunks.push(c)
       let body = {}
-      try { body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') } catch { body = {} }
-      const config = getConfig()
+      try { body = JSON.parse((await readBody(req)) || '{}') } catch (e) { body = {} }
       if (typeof body.autoControl === 'boolean') config.autoControl = body.autoControl
-      const { state, since } = machine.snapshot()
-      const { autoControl, defaultTarget } = config
-      res.end(JSON.stringify({ ok: true, state, since, autoControl, defaultTarget }))
+      if (typeof body.defaultTarget === 'string' && body.defaultTarget.trim()) config.defaultTarget = normalizeUrl(body.defaultTarget)
+      if (typeof body.onlyComplex === 'boolean') { config.onlyComplex = body.onlyComplex; machine.setOnlyComplex(config.onlyComplex) }
+      const snap = machine.snapshot()
+      res.end(JSON.stringify({ ok: true, state: snap.state, since: snap.since, autoControl: config.autoControl, defaultTarget: config.defaultTarget, onlyComplex: config.onlyComplex }))
       return
     }
     res.writeHead(404)
@@ -34,34 +56,73 @@ export function createStateHandler(machine, getConfig) {
 }
 
 export default {
-  inject: ['webServer'],
+  inject: ['webServer', 'timer'],
   apply(ctx, rawConfig) {
-    const config = { ...DEFAULT_CONFIG, ...rawConfig }
+    const config = Object.assign({
+      autoControl: true,
+      defaultTarget: 'https://www.bilibili.com/',
+      targets: ['https://www.bilibili.com/', 'https://www.douyin.com/', 'https://www.youtube.com/'],
+      onlyComplex: false,
+      complexThresholdMs: 20000,
+    }, rawConfig || {})
+    if (!Array.isArray(config.targets)) config.targets = ['https://www.bilibili.com/']
+    const refs = { pinged: false, fishSeq: 0 }
     const machine = createActivityMachine()
+    machine.setOnlyComplex(config.onlyComplex)
+    let complexTimer = null
+    function clearComplexTimer() { if (complexTimer) { complexTimer(); complexTimer = null } }
 
-    // 权威运行/空闲信号（忽略 session-start，避免与 status 重复计数）
-    ctx.on('agent/status', (payload) => { machine.onStatus(payload.status) })
-    // 工具跨度：waterfall，只观察不拦截
-    ctx.on('tools/pre-execute', async (_exec, next) => {
-      machine.onToolStart()
-      try { return await next() }
-      catch (e) { machine.onToolEnd(); throw e }
+    ctx.on('agent/status', (p) => {
+      machine.onStatus(p.status)
+      if (p.status === 'running' && config.onlyComplex) {
+        clearComplexTimer()
+        complexTimer = ctx.timer.timeout(() => { complexTimer = null; machine.markComplex() }, config.complexThresholdMs)
+      }
+      if (p.status === 'idle') clearComplexTimer()
     })
+    ctx.on('tools/pre-execute', async (_e, next) => { clearComplexTimer(); machine.onToolStart(); try { return await next() } catch (e) { machine.onToolEnd(); throw e } })
     ctx.on('tools/result', () => { machine.onToolEnd() })
-    // 询问用户：next() 决议期间处于 awaiting，决议后复位
-    ctx.on('approval/request', async (_req, next) => {
-      machine.onApprovalStart()
-      try { return await next() } finally { machine.onApprovalSettled() }
-    })
-    // 回合关闭：整体复位
-    ctx.on('agent/turn-stopping', () => { machine.onTurnStopping() })
-    ctx.on('agent/disposed', () => { machine.onTurnStopping() })
+    ctx.on('approval/request', async (_r, next) => { machine.onApprovalStart(); try { return await next() } finally { machine.onApprovalSettled() } })
+    ctx.on('agent/turn-stopping', () => { clearComplexTimer(); machine.onTurnStopping() })
+    ctx.on('agent/disposed', () => { clearComplexTimer(); machine.onTurnStopping() })
 
-    const dispose = ctx.webServer.register({
-      kind: 'prefix',
-      path: '/video-pet',
-      handler: createStateHandler(machine, () => config),
+    function configSnapshot() {
+      return { targets: config.targets.slice(), defaultTarget: config.defaultTarget, onlyComplex: config.onlyComplex, autoControl: config.autoControl }
+    }
+
+    harness.handle('ping', () => { refs.pinged = true; return { ok: true } })
+    harness.handle('open-fish', () => { refs.fishSeq += 1; return { ok: true, fishSeq: refs.fishSeq } })
+    harness.handle('get-config', () => configSnapshot())
+    harness.handle('set-target', (args) => {
+      if (args && typeof args.url === 'string' && args.url.trim()) {
+        const url = normalizeUrl(args.url)
+        config.defaultTarget = url
+        if (config.targets.indexOf(url) === -1) config.targets.push(url)
+      }
+      return configSnapshot()
     })
-    ctx.effect(() => dispose)
+    harness.handle('add-target', (args) => {
+      if (args && typeof args.url === 'string' && args.url.trim()) {
+        const url = normalizeUrl(args.url)
+        if (config.targets.indexOf(url) === -1) config.targets.push(url)
+      }
+      return configSnapshot()
+    })
+    harness.handle('remove-target', (args) => {
+      if (args && typeof args.url === 'string') {
+        const url = normalizeUrl(args.url)
+        config.targets = config.targets.filter((t) => t !== url)
+        if (config.targets.length === 0) config.targets = ['https://www.bilibili.com/']
+        if (config.defaultTarget === url) config.defaultTarget = config.targets[0]
+      }
+      return configSnapshot()
+    })
+    harness.handle('set-only-complex', (args) => {
+      if (args && typeof args.value === 'boolean') { config.onlyComplex = args.value; machine.setOnlyComplex(config.onlyComplex) }
+      return configSnapshot()
+    })
+
+    const dispose = ctx.webServer.register({ kind: 'prefix', path: '/video-pet', handler: createStateHandler(machine, config, refs) })
+    ctx.effect(() => { return () => { clearComplexTimer(); dispose() } })
   },
 }
