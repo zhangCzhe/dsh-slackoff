@@ -61,7 +61,7 @@ AI 工作时，右侧自动弹出视频小窗并播放；AI 中断 / 询问时�
 
 ## 🎬 工作原理
 
-**DSH 插件**（`dsh/`）监听 Agent 事件（思考 / 调用工具 / 审批 / 结束），经状态机归纳为 `thinking · tool · awaiting · idle` 四态，并通过 `GET /video-pet/state` 暴露。
+**DSH 插件**（`dsh/`）监听 Agent 事件（思考 / 调用工具 / 审批 / 结束），经状态机归纳为 `thinking · tool · awaiting · idle` 四态，并通过 `GET /slackoff/state` 暴露。
 
 **Chrome 扩展**（`extension/`）在 DSH 页轮询这个状态，经后台路由到视频站页面，调用真实 `<video>` 的 `play()` / `pause()`，并支持画中画。
 
@@ -104,22 +104,28 @@ npm run build:extension   # 或零依赖方式：node build-extension-nospawn.mj
 
 ### 2️⃣ 安装 DSH 插件
 
-`dsh/` 目录是 DSH 插件源码，含两个半区：
+`dsh/` 目录是 DSH 插件源码，已发布为 npm 包 **`dsh-slackoff`**，含两个半区：
 
-| 文件 | 半区 | 作用 |
+| 入口 | 半区 | 作用 |
 |---|---|---|
-| `dsh/host.js` | Host | 监听 Agent 事件、状态机、提供 `GET /video-pet/state` |
-| `dsh/client.js` | Client | 「🐟 开始摸鱼」按钮 + 「🐟 摸鱼配置」面板 |
+| `dsh-slackoff` | Host | 监听 Agent 事件、状态机、提供 `GET /slackoff/state` |
+| `dsh-slackoff/client` | Client | 「🐟 开始摸鱼」按钮 + 「🐟 摸鱼配置」面板 |
 
-**方式 A · 动态安装**（临时，当前会话生效）：
+```bash
+npm install dsh-slackoff
+```
 
-在 DSH 会话中，用 Cordis 动态插件工具 `define` 上述 Host 与 Client 两个半区，再 `run` 激活。
+然后在 agent preset 的 `agent.cordis.yml` 里注册两行：
 
-**方式 B · 静态安装**（持久）：
+```yaml
+- id: slackoff-host
+  name: dsh-slackoff
 
-把 Host / Client 组合作为 agent preset 写入 `${DSH_HOME:-$HOME/.dsh}/.agent-presets/<id>/`。
+- id: slackoff-client
+  name: dsh-slackoff/client
+```
 
-> 扩展默认从 `http://127.0.0.1:3080/video-pet/state` 读状态，两端需在同机配对。
+> 扩展默认从 `http://127.0.0.1:3080/slackoff/state` 读状态，两端需在同机配对。
 
 ---
 
