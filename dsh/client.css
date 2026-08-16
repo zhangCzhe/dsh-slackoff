@@ -1,11 +1,22 @@
-#video-pet-toggle {
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  padding: 6px 10px;
-}
-#video-pet-toggle.on {
-  outline: 1px solid currentColor;
-}
+/* dsh-slackoff Client 样式（与 client.js 内 styles.insert 的 CSS 保持一致） */
+.vp-set { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; }
+.vp-set-label { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); }
+.vp-set-desc { font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.vp-set-control { display: flex; gap: 6px; align-items: center; }
+.vp-set-input { flex: 1; min-width: 0; border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); font-size: 12px; padding: 6px 8px; outline: none; }
+.vp-set-input:focus { border-color: var(--dsw-alias-brand-primary); }
+.vp-set-input::placeholder { color: var(--dsw-alias-label-secondary); }
+.vp-set-save { border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); font-size: 12px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.vp-set-save:hover { border-color: var(--dsw-alias-brand-primary); }
+.vp-set-check { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dsw-alias-label-primary); cursor: pointer; }
+.vp-fish { border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); font-size: 12px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+.vp-fish:hover { border-color: var(--dsw-alias-brand-primary); }
+.vp-list { display: flex; flex-direction: column; gap: 6px; }
+.vp-item { display: flex; align-items: center; gap: 8px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 6px; padding: 6px 8px; cursor: pointer; font-size: 12px; }
+.vp-item:hover { border-color: var(--dsw-alias-brand-primary); }
+.vp-item-active { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-bg-layer-2); }
+.vp-item-url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-primary); }
+.vp-item-badge { font-size: 11px; color: var(--dsw-alias-label-secondary); white-space: nowrap; }
+.vp-item-active .vp-item-badge { color: var(--dsw-alias-brand-primary); }
+.vp-item-del { border: none; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
+.vp-item-del:hover { color: var(--dsw-alias-state-error-primary); }
