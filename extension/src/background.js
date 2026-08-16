@@ -57,7 +57,7 @@ async function ensureVideoTab(target, canOpen) {
   if (opening) return null
   opening = true
   try {
-    console.log('[video-pet][bg] opening popup', target)
+    console.log('[slackoff][bg] opening popup', target)
     const winOpts = { type: 'popup', width: 420, height: 640, focused: true }
     const pos = await getRightPosition(420, 640)
     if (pos) { winOpts.left = pos.left; winOpts.top = pos.top }
@@ -72,12 +72,12 @@ async function ensureVideoTab(target, canOpen) {
 
 async function control(action, shouldFocus) {
   const target = normalizeUrl(defaultTarget || FALLBACK_TARGET)
-  console.log('[video-pet][bg] control', action, 'target', target)
+  console.log('[slackoff][bg] control', action, 'target', target)
   const tabId = await ensureVideoTab(target, action === 'play')
   if (tabId == null) return
   if (shouldFocus) await focusPopup(tabId)
-  try { await chrome.tabs.sendMessage(tabId, { type: 'video-pet/control', action }) }
-  catch (e) { console.error('[video-pet][bg] sendMessage failed', e) }
+  try { await chrome.tabs.sendMessage(tabId, { type: 'slackoff/control', action }) }
+  catch (e) { console.error('[slackoff][bg] sendMessage failed', e) }
 }
 
 async function openFish() {
@@ -88,18 +88,18 @@ async function openFish() {
 }
 
 async function pauseExisting() {
-  console.log('[video-pet][bg] pauseExisting')
+  console.log('[slackoff][bg] pauseExisting')
   const target = normalizeUrl(defaultTarget || FALLBACK_TARGET)
   const tabId = await ensureVideoTab(target, false)
-  console.log('[video-pet][bg] pauseExisting tabId', tabId)
+  console.log('[slackoff][bg] pauseExisting tabId', tabId)
   if (tabId == null) return
   lastAction = 'pause'
-  try { await chrome.tabs.sendMessage(tabId, { type: 'video-pet/control', action: 'pause' }) } catch (e) { console.error('[video-pet][bg] pause send failed', e) }
+  try { await chrome.tabs.sendMessage(tabId, { type: 'slackoff/control', action: 'pause' }) } catch (e) { console.error('[slackoff][bg] pause send failed', e) }
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.type === 'video-pet/state') {
-    console.log('[video-pet][bg] state msg', msg.state, msg.defaultTarget, 'fishSeq', msg.fishSeq)
+  if (msg.type === 'slackoff/state') {
+    console.log('[slackoff][bg] state msg', msg.state, msg.defaultTarget, 'fishSeq', msg.fishSeq)
     if (typeof msg.defaultTarget === 'string' && msg.defaultTarget.trim()) defaultTarget = normalizeUrl(msg.defaultTarget)
     if (typeof msg.fishSeq === 'number' && msg.fishSeq > lastFishSeq) {
       lastFishSeq = msg.fishSeq
@@ -109,29 +109,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const shouldFocus = action === 'play' && lastAction !== 'play'
     lastAction = action
     chrome.storage.sync.get({ autoControl: true }).then(({ autoControl }) => {
-      console.log('[video-pet][bg] autoControl', autoControl)
+      console.log('[slackoff][bg] autoControl', autoControl)
       if (autoControl) control(action, shouldFocus)
     })
-  } else if (msg.type === 'video-pet/user-focus') {
-    console.log('[video-pet][bg] user-focus received')
+  } else if (msg.type === 'slackoff/user-focus') {
+    console.log('[slackoff][bg] user-focus received')
     pauseExisting()
-  } else if (msg.type === 'video-pet/set-tab') {
-    console.log('[video-pet][bg] set-tab', sender.tab?.id)
+  } else if (msg.type === 'slackoff/set-tab') {
+    console.log('[slackoff][bg] set-tab', sender.tab?.id)
     if (sender.tab?.id != null) {
       setTargetTab(sender.tab.id)
-      if (lastAction) chrome.tabs.sendMessage(sender.tab.id, { type: 'video-pet/control', action: lastAction }).catch(() => {})
+      if (lastAction) chrome.tabs.sendMessage(sender.tab.id, { type: 'slackoff/control', action: lastAction }).catch(() => {})
     }
   }
   sendResponse({ ok: true })
   return false
 })
 
-chrome.alarms.create('video-pet-watchdog', { periodInMinutes: 0.5 })
+chrome.alarms.create('slackoff-watchdog', { periodInMinutes: 0.5 })
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'video-pet-watchdog' && targetTabId != null) {
+  if (alarm.name === 'slackoff-watchdog' && targetTabId != null) {
     chrome.tabs.get(targetTabId).catch(() => { setTargetTab(null) })
   }
 })
 
-console.log('[video-pet][bg] service worker started')
+console.log('[slackoff][bg] service worker started')
 restoreTab()
