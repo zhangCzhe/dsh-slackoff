@@ -1,6 +1,7 @@
 {
   "name": "dsh-slackoff",
   "version": "0.1.0",
+  "description": "DSH 摸鱼伴侣 —— AI 工作时自动弹出视频小窗播放，中断/询问时自动暂停",
   "type": "module",
   "main": "host.js",
   "exports": {
@@ -8,6 +9,18 @@
     "./client": "./client.js",
     "./package.json": "./package.json"
   },
+  "files": [
+    "host.js",
+    "client.js",
+    "state-machine.js",
+    "client.css"
+  ],
   "dsh": { "client": { "platform": "web" } },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhangCzhe/dsh-slackoff"
+  },
+  "license": "MIT",
+  "keywords": ["dsh", "slackoff", "摸鱼", "video", "bilibili", "youtube"],
   "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1" }
 }
