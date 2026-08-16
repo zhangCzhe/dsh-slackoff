@@ -22,11 +22,21 @@ export function normalizeUrl(u) {
 }
 
 export function createStateHandler(machine, config, refs) {
+  function configSnapshot() {
+    return { targets: config.targets.slice(), defaultTarget: config.defaultTarget, onlyComplex: config.onlyComplex, autoControl: config.autoControl }
+  }
+  async function readJson(req) {
+    let body = {}
+    try { body = JSON.parse((await readBody(req)) || '{}') } catch (e) { body = {} }
+    return body
+  }
   return async function handler(req, res) {
     let pathname = (req.url || '/').split('?')[0]
     if (pathname.indexOf('/slackoff') === 0) pathname = pathname.slice('/slackoff'.length) || '/'
     res.setHeader('content-type', 'application/json; charset=utf-8')
     res.setHeader('cache-control', 'no-store')
+
+    // 活动状态：摸鱼小窗 / 浏览器扩展轮询
     if (pathname === '/state' && req.method === 'GET') {
       const snap = machine.snapshot()
       res.end(JSON.stringify({
@@ -40,9 +50,10 @@ export function createStateHandler(machine, config, refs) {
       }))
       return
     }
+
+    // 旧的控制端点（浏览器扩展仍使用）
     if (pathname === '/control' && req.method === 'POST') {
-      let body = {}
-      try { body = JSON.parse((await readBody(req)) || '{}') } catch (e) { body = {} }
+      const body = await readJson(req)
       if (typeof body.autoControl === 'boolean') config.autoControl = body.autoControl
       if (typeof body.defaultTarget === 'string' && body.defaultTarget.trim()) config.defaultTarget = normalizeUrl(body.defaultTarget)
       if (typeof body.onlyComplex === 'boolean') { config.onlyComplex = body.onlyComplex; machine.setOnlyComplex(config.onlyComplex) }
@@ -50,6 +61,63 @@ export function createStateHandler(machine, config, refs) {
       res.end(JSON.stringify({ ok: true, state: snap.state, since: snap.since, autoControl: config.autoControl, defaultTarget: config.defaultTarget, onlyComplex: config.onlyComplex }))
       return
     }
+
+    // 客户端 RPC over HTTP
+    // 说明：本插件以「静态 npm 插件」形式加载（profile node_modules 符号链接），
+    // 静态插件的 host.apply(ctx, config) 运行在真实 host realm，没有动态插件沙箱里的
+    // harness 全局，也不存在 harness.handle / host.call 的 Client→Host RPC 通道。
+    // 因此客户端（client.js）原本通过 host.call(...) 调用的方法，统一改走这里暴露的 HTTP 端点。
+    if (pathname === '/ping' && req.method === 'POST') {
+      refs.pinged = true
+      res.end(JSON.stringify({ ok: true }))
+      return
+    }
+    if (pathname === '/open-fish' && req.method === 'POST') {
+      refs.fishSeq += 1
+      res.end(JSON.stringify({ ok: true, fishSeq: refs.fishSeq }))
+      return
+    }
+    if (pathname === '/get-config' && (req.method === 'POST' || req.method === 'GET')) {
+      res.end(JSON.stringify(configSnapshot()))
+      return
+    }
+    if (pathname === '/set-target' && req.method === 'POST') {
+      const body = await readJson(req)
+      if (body && typeof body.url === 'string' && body.url.trim()) {
+        const url = normalizeUrl(body.url)
+        config.defaultTarget = url
+        if (config.targets.indexOf(url) === -1) config.targets.push(url)
+      }
+      res.end(JSON.stringify(configSnapshot()))
+      return
+    }
+    if (pathname === '/add-target' && req.method === 'POST') {
+      const body = await readJson(req)
+      if (body && typeof body.url === 'string' && body.url.trim()) {
+        const url = normalizeUrl(body.url)
+        if (config.targets.indexOf(url) === -1) config.targets.push(url)
+      }
+      res.end(JSON.stringify(configSnapshot()))
+      return
+    }
+    if (pathname === '/remove-target' && req.method === 'POST') {
+      const body = await readJson(req)
+      if (body && typeof body.url === 'string') {
+        const url = normalizeUrl(body.url)
+        config.targets = config.targets.filter((t) => t !== url)
+        if (config.targets.length === 0) config.targets = ['https://www.bilibili.com/']
+        if (config.defaultTarget === url) config.defaultTarget = config.targets[0]
+      }
+      res.end(JSON.stringify(configSnapshot()))
+      return
+    }
+    if (pathname === '/set-only-complex' && req.method === 'POST') {
+      const body = await readJson(req)
+      if (body && typeof body.value === 'boolean') { config.onlyComplex = body.value; machine.setOnlyComplex(config.onlyComplex) }
+      res.end(JSON.stringify(configSnapshot()))
+      return
+    }
+
     res.writeHead(404)
     res.end(JSON.stringify({ error: 'not found' }))
   }
@@ -85,42 +153,6 @@ export default {
     ctx.on('approval/request', async (_r, next) => { machine.onApprovalStart(); try { return await next() } finally { machine.onApprovalSettled() } })
     ctx.on('agent/turn-stopping', () => { clearComplexTimer(); machine.onTurnStopping() })
     ctx.on('agent/disposed', () => { clearComplexTimer(); machine.onTurnStopping() })
-
-    function configSnapshot() {
-      return { targets: config.targets.slice(), defaultTarget: config.defaultTarget, onlyComplex: config.onlyComplex, autoControl: config.autoControl }
-    }
-
-    harness.handle('ping', () => { refs.pinged = true; return { ok: true } })
-    harness.handle('open-fish', () => { refs.fishSeq += 1; return { ok: true, fishSeq: refs.fishSeq } })
-    harness.handle('get-config', () => configSnapshot())
-    harness.handle('set-target', (args) => {
-      if (args && typeof args.url === 'string' && args.url.trim()) {
-        const url = normalizeUrl(args.url)
-        config.defaultTarget = url
-        if (config.targets.indexOf(url) === -1) config.targets.push(url)
-      }
-      return configSnapshot()
-    })
-    harness.handle('add-target', (args) => {
-      if (args && typeof args.url === 'string' && args.url.trim()) {
-        const url = normalizeUrl(args.url)
-        if (config.targets.indexOf(url) === -1) config.targets.push(url)
-      }
-      return configSnapshot()
-    })
-    harness.handle('remove-target', (args) => {
-      if (args && typeof args.url === 'string') {
-        const url = normalizeUrl(args.url)
-        config.targets = config.targets.filter((t) => t !== url)
-        if (config.targets.length === 0) config.targets = ['https://www.bilibili.com/']
-        if (config.defaultTarget === url) config.defaultTarget = config.targets[0]
-      }
-      return configSnapshot()
-    })
-    harness.handle('set-only-complex', (args) => {
-      if (args && typeof args.value === 'boolean') { config.onlyComplex = args.value; machine.setOnlyComplex(config.onlyComplex) }
-      return configSnapshot()
-    })
 
     const dispose = ctx.webServer.register({ kind: 'prefix', path: '/slackoff', handler: createStateHandler(machine, config, refs) })
     ctx.effect(() => { return () => { clearComplexTimer(); dispose() } })
