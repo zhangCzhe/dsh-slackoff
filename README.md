@@ -104,25 +104,8 @@ npm run build:extension   # 或零依赖方式：node build-extension-nospawn.mj
 
 ### 2️⃣ 安装 DSH 插件
 
-`dsh/` 目录是 DSH 插件源码，已发布为 npm 包 **`dsh-slackoff`**，含两个半区：
-
-| 入口 | 半区 | 作用 |
-|---|---|---|
-| `dsh-slackoff` | Host | 监听 Agent 事件、状态机、提供 `GET /slackoff/state` |
-| `dsh-slackoff/client` | Client | 「🐟 开始摸鱼」按钮 + 「🐟 摸鱼配置」面板 |
-
 ```bash
 npm install dsh-slackoff
-```
-
-然后在 agent preset 的 `agent.cordis.yml` 里注册两行：
-
-```yaml
-- id: slackoff-host
-  name: dsh-slackoff
-
-- id: slackoff-client
-  name: dsh-slackoff/client
 ```
 
 > 扩展默认从 `http://127.0.0.1:3080/slackoff/state` 读状态，两端需在同机配对。
