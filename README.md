@@ -126,15 +126,6 @@ npm install dsh-slackoff
 
 ---
 
-## ⚠️ 已知限制
-
-- **自动播放策略**：首次有声播放需一次用户手势。
-- **抖音**：feed 首页是反爬「预创建占位」播放器，无法自动加载源；请改用 `/video/<id>` 详情页链接。
-- **站点改版**：视频站 DOM 变更可能导致 `<video>` 选择器失效，更新 `extension/src/selectors.js` 即可。
-- **MV3**：后台 service worker 可能被挂起；状态桥已放在 DSH 页 content script 规避。
-
----
-
 ## 📁 目录结构
 
 ```
