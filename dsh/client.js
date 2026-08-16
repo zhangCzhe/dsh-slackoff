@@ -84,12 +84,12 @@ export default {
     }
 
     slots.inject('conversation.input.right', () => slots.register(
-      { name: 'conversation.input.right', id: 'video-pet-fish', order: 0, label: '开始摸鱼' },
+      { name: 'conversation.input.right', id: 'slackoff-fish', order: 0, label: '开始摸鱼' },
       () => React.createElement('button', { type: 'button', className: 'vp-fish', title: '打开/跳转到摸鱼小窗', onClick: () => host.call('open-fish', {}).catch(() => {}) }, '🐟 开始摸鱼'),
     ))
 
     slots.inject('settings.general.item', () => slots.register(
-      { name: 'settings.general.item', id: 'video-pet-target', order: 30 },
+      { name: 'settings.general.item', id: 'slackoff-target', order: 30 },
       () => React.createElement(FishConfig),
     ))
   },
