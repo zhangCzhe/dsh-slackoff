@@ -39,10 +39,22 @@
 
 ## 📸 效果预览
 
-> 扩展设置面板：实时显示 AI 状态与目标站点，开关自动控制与画中画。
+AI 工作时，右侧自动弹出视频小窗并播放；AI 中断 / 询问时自动暂停。
 
 <div align="center">
-  <img src="docs/screenshot-popup.png" alt="dsh-slackoff 设置面板" width="320">
+  <img src="docs/screenshot-runtime.png" alt="dsh-slackoff 运行效果：AI 工作时抖音小窗播放" width="800">
+</div>
+
+**摸鱼配置**（DSH 设置 → 通用）：站点列表可增删、点击启用，「只在复杂任务时开启」。
+
+<div align="center">
+  <img src="docs/screenshot-setting.png" alt="dsh-slackoff 摸鱼配置面板" width="640">
+</div>
+
+**扩展设置面板**（Chrome 工具栏 🐟 图标）：实时显示 AI 状态与目标站点，开关自动控制与画中画。
+
+<div align="center">
+  <img src="docs/screenshot-popup.png" alt="dsh-slackoff 扩展设置面板" width="320">
 </div>
 
 ---
