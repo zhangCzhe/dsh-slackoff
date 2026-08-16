@@ -1,6 +1,6 @@
 {
   "name": "dsh-slackoff",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DSH 摸鱼伴侣 —— AI 工作时自动弹出视频小窗播放，中断/询问时自动暂停",
   "type": "module",
   "main": "host.js",
