@@ -8,7 +8,7 @@ let pipEnabled = true
 let lastScan = 0
 let playWaitTimer = null
 
-console.log('[video-pet][site] injected', location.hostname)
+console.log('[slackoff][site] injected', location.hostname)
 
 chrome.storage.sync.get({ pip: true }).then(({ pip }) => { pipEnabled = pip })
 
@@ -81,7 +81,7 @@ function clickPlayUI(root) {
     let el = null
     try { el = root.querySelector(sel) } catch (e) { el = null }
     if (el) {
-      console.log('[video-pet][site] clickPlayUI', sel)
+      console.log('[slackoff][site] clickPlayUI', sel)
       el.click()
       return true
     }
@@ -94,16 +94,16 @@ function doPlay(retry) {
   const p = video.play()
   if (!p || !p.then) return
   p.then(() => {
-    console.log('[video-pet][site] play ok paused=' + video.paused)
+    console.log('[slackoff][site] play ok paused=' + video.paused)
     if (pipEnabled) video.requestPictureInPicture().catch(() => {})
   }).catch((err) => {
-    console.log('[video-pet][site] play failed', err && err.name)
+    console.log('[slackoff][site] play failed', err && err.name)
     if (err && err.name === 'NotAllowedError') {
       // 无手势：静音自动播放是被允许的唯一路径
       try { video.muted = true } catch (e) {}
       video.play()
         .then(() => {
-          console.log('[video-pet][site] play ok (muted)')
+          console.log('[slackoff][site] play ok (muted)')
           if (pipEnabled) video.requestPictureInPicture().catch(() => {})
         })
         .catch(() => clickPlayUI(document))
@@ -128,7 +128,7 @@ function tryPlay() {
     if (videoHasSource(video)) { clearInterval(playWaitTimer); playWaitTimer = null; doPlay(0); return }
     if (attempts >= 20) {
       clearInterval(playWaitTimer); playWaitTimer = null
-      console.log('[video-pet][site] no source after wait')
+      console.log('[slackoff][site] no source after wait')
       clickPlayUI(document)
     }
   }, 500)
@@ -167,7 +167,7 @@ function findVideo(force) {
   if (!force && now - lastScan < 500) return
   lastScan = now
   const found = findVideoDeep(document, location.hostname, 0)
-  console.log('[video-pet][site] findVideo', found ? 'FOUND ' + describeVideo(found) : 'none ' + frameDiagnostics())
+  console.log('[slackoff][site] findVideo', found ? 'FOUND ' + describeVideo(found) : 'none ' + frameDiagnostics())
   if (found !== video) {
     video = found
     latch = createDecisionLatch()
@@ -192,8 +192,8 @@ setInterval(() => {
 }, 2000)
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === 'video-pet/control') {
-    console.log('[video-pet][site] control', msg.action)
+  if (msg.type === 'slackoff/control') {
+    console.log('[slackoff][site] control', msg.action)
     pendingAction = msg.action
     if (!video) findVideo(true)
     else apply(msg.action)
@@ -204,4 +204,4 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 findVideo(true)
 
-chrome.runtime.sendMessage({ type: 'video-pet/set-tab' }).catch(() => {})
+chrome.runtime.sendMessage({ type: 'slackoff/set-tab' }).catch(() => {})
